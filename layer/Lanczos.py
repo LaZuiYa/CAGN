@@ -15,12 +15,11 @@ from scipy.sparse.linalg import eigsh
 cuda_device = 0
 device = torch.device("cuda:0")
 EPS = float(np.finfo(np.float32).eps)
-# 随机数生成器
+
 rng = np.random.default_rng(seed=1234)
 torch.manual_seed(1234)
 
 
-# 第一版代码的算法误差太大
 
 
 
@@ -78,9 +77,9 @@ def restart_lanczos_approxmiate__Tensor(step, H, datapath=None):
             H, k=step, v0=v0,tol=1e-8,
             which='LM', return_eigenvectors=True
         )
-        # 对特征向量进行重正交化
+
         evecs = reorthogonalize(evecs)
-        v0 = evecs[:, -1]  # 更新初始向量
+        v0 = evecs[:, -1]
 
 
     # evals, evecs = eigsh(H, k=step, which='LM', return_eigenvectors=True)

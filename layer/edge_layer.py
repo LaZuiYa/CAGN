@@ -10,7 +10,7 @@ from scipy.sparse.linalg import eigsh
 from scipy.sparse import coo_matrix, identity
 
 EPS = float(np.finfo(np.float32).eps)
-# 随机数生成器
+
 rng = np.random.default_rng(seed=42)
 
 # select cuda device if available
@@ -21,22 +21,22 @@ device = torch.device("cuda:0")
 def process(mul_L_real, mul_L_imag, weight, X_real, X_imag):
     X_real_weighted = torch.matmul(X_real, weight)
     X_imag_weighted = torch.matmul(X_imag, weight)
-    # 稀疏矩阵乘法
+
     L_real_X_real = torch.spmm(mul_L_real.float(), X_real_weighted.float())
     L_imag_X_imag = torch.spmm(mul_L_imag.float(), X_imag_weighted.float())
     L_imag_X_real = torch.spmm(mul_L_imag.float(), X_real_weighted.float())
     L_real_X_imag = torch.spmm(mul_L_real.float(), X_imag_weighted.float())
-    # # 计算 real 和 imag
+
     real = L_real_X_real - L_imag_X_imag
     imag = L_imag_X_real + L_real_X_imag
-    # 返回 float16 精度结果（减少显存使用）
+
     return torch.stack([real, imag])
 
 
 
 
 
-class complex_relu_layer(nn.Module):  # 这个是复数激活函数层
+class complex_relu_layer(nn.Module):
     def __init__(self, ):
         super(complex_relu_layer, self).__init__()
 
@@ -73,9 +73,8 @@ def load_from_file(filename):
         return pickle.load(f)
 
 
-# 你看，他用的是切比雪夫   对应论文公式（5）,这个实际上是滤波器
-# 这个cheb巻积就是实部虚部互相乘
-class ChebConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
+
+class ChebConv(nn.Module):
     """
     The MagNet convolution operation.
 
@@ -147,7 +146,6 @@ class ChebConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
                 Q_diag_dd_real = torch.mm(self.Qreal, diag_dd)
                 Q_diag_dd_imag = torch.mm(self.Qimag, diag_dd)
 
-                # 计算 real 和 imag 部分，并减少不必要的中间变量
                 real_part = torch.mm(Q_diag_dd_real, self.Qreal.T) + torch.mm(Q_diag_dd_imag, self.Qimag.T)
                 imag_part = torch.mm(Q_diag_dd_imag, self.Qreal.T) - torch.mm(Q_diag_dd_real, self.Qimag.T)
 
@@ -183,7 +181,7 @@ class ChebConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
                                          self.weight[i], X_real, X_imag))
 
         result = []
-        for i in range(len(self.mul_L_real)):  # 我估计是知道为什么用异步去做了，他tensor乘法快不了
+        for i in range(len(self.mul_L_real)):
             result.append(torch.jit.wait(future[i]))
         future_long = []
         result = torch.sum(torch.stack(result), dim=0)

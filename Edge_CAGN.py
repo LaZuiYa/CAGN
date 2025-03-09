@@ -59,7 +59,7 @@ def parse_args():
 
 
 def acccompute(data):
-    # 从数据字符串中提取 test_acc_full 的值
+
     test_acc_full_values = []
     for line in data.splitlines():
         if 'test_acc_full:' in line:
@@ -70,14 +70,13 @@ def acccompute(data):
                     test_acc_full_values.append(value)
                     break
 
-    # 计算平均值
+
     average_value = sum(test_acc_full_values) / len(test_acc_full_values)
 
-    # 计算最大值和与最大值的差异
     max_value = max(test_acc_full_values)
     differences_from_max = max_value - average_value
 
-    # 打印结果
+
 
     print(f"{average_value * 100:.2f}±{differences_from_max * 100:.2f}")
 

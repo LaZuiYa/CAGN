@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 数据保存
+
 
 import argparse
 import time
@@ -7,10 +7,9 @@ from datetime import datetime
 
 import numpy as np
 import torch
-# 优化器
-import torch.optim as optim
+# 优化器import torch.optim as optim
 from torch import nn
-# 数据集
+
 from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS, CoraFull
 
 from layer.Lanczos import *
@@ -24,7 +23,7 @@ from utils.save_settings import write_log
 cuda_device = 0
 device = torch.device("cuda:0")
 EPS = float(np.finfo(np.float32).eps)
-# 随机数生成器
+
 rng = np.random.default_rng(seed=42)
 
 
@@ -56,11 +55,11 @@ def parse_args():
                         default="./WebKBWisconsion/06-10-09_53_11/model8.t7",
                         help='Random seed for training testing split/random graph generation.')
 
-    # 切比雪夫多项式刻度
+
     parser.add_argument('--lanczos_step', type=int, default=90, help='K for cheb series')
     parser.add_argument('--multihopCov', type=list, default=[2], help='multihopCov for lanczos')
     parser.add_argument('--multihopRes', type=list, default=[8], help='multihopCov for lanczos')
-    parser.add_argument('--MLP', type=str, default="MLP", help='是否使用MLP作为滤波器')
+    parser.add_argument('--MLP', type=str, default="MLP", help='mlp')
     parser.add_argument('--num_filter', type=int, default=512, help='num of filters')
 
     parser.add_argument('--K', type=int, default=1, help='K for cheb series')
@@ -79,8 +78,7 @@ def parse_args():
 
 
 ###################################################################################################################################################################################
-# 数据处理
-# 这个函数实际上是将切比雪夫多项式截断的滤波器转换成tensor
+
 def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     """Convert a scipy sparse matrix to a torch sparse tensor."""
 
@@ -92,7 +90,7 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
         np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
-    # numpy和tensor是需要进行转换的
+
     return torch.sparse.FloatTensor(indices, values, shape)
 
 
@@ -100,9 +98,9 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
 
 
 def main(args):
-    # 这是对于人造数据集来说的
+
     if args.randomseed > 0:
-        # 手工设置的随机数种子
+
         torch.manual_seed(args.randomseed)
 
     date_time = datetime.now().strftime('%m-%d-%H-%M-%S')
@@ -114,12 +112,11 @@ def main(args):
         except FileExistsError:
             print('Folder exists!')
 
-    # 数据加载
 
-    # telegram/telegram WebKB/Cornell WebKB/Wisconsin WebKB/Texas cora_ml/ citeseer/  这是dataset的参数值
-    # --epochs 3000 --lr 0.002 --num_filter 16 --q 0.05 --log_path telegram_magnet --dataset telegram/telegram  --K 1  --layer 2 --dropout 0.5
+
+
     load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
-    # 这个load_func 是pyg提供的数据集处理方法
+
     if load_func == 'WebKB':
         load_func = WebKB
     elif load_func == 'WikipediaNetwork':
@@ -130,29 +127,15 @@ def main(args):
         load_func = citation_datasets
     elif load_func == 'citeseer_npz':
         load_func = citation_datasets
-    # elif load_func == 'Cora':
-    #     load_func = CoraFull
+
     else:
-        # 处理手工生成的数据集
+
         load_func = load_syn
 
-    # 这是提前把滤波器的切比雪夫多项式截断算好了
+
     _file_ = args.data_path + args.dataset + '/data' + str(args.q) + '_' + str(args.K) + '_sparse.pk'
     storeLanczos = args.data_path + args.dataset + 'data'
-    # if os.path.isfile(_file_):  # 这就是说读取已经处理好的L矩阵
-    #     # data是一个字典
-    #     data = pk.load(open(_file_, 'rb'))
-    #     # WebKB的cornell数据集data0.25_2_sparse.pk的数据文件是183*183
-    #     # 这个L应该是hermitian_decomp_sparse函数生成的，如果之前有保存。pk文件那么就会从。pk文件中读取
-    #     L = data['L']
-    #     # print(len(L))
-    #     # 数据预处理
-    #     X, label, train_mask, val_mask, test_mask,_ = geometric_dataset_sparse(args.q, args.K,
-    #                                                                          root=args.data_path + args.dataset,
-    #                                                                          subset=subset,
-    #                                                                          dataset=load_func, load_only=True,
-    #                                                                          save_pk=False)
-    # else:
+
     X, label, train_mask, val_mask, test_mask, L,_ = geometric_dataset_sparse(args.q, args.K,
                                                                                     root=args.data_path + args.dataset,
                                                                                     subset=subset,
@@ -164,7 +147,7 @@ def main(args):
     cluster_dim = np.amax(_label_) + 1
 
     L_img = []
-    # 虚数
+
     L_real = []
 
     L_normal = L[1]
@@ -173,8 +156,8 @@ def main(args):
     # adj.data = np.array(np.ones(len(adj.data)))
     Ritz, Q = restart_lanczos_approxmiate__Tensor(args.lanczos_step, L_normal, datapath=storeLanczos)
     # Ritz = Ritz.astype(np.float32)
-    Ritz = torch.tensor(Ritz)  # 转换为 PyTorch 复数张量
-    Q = Q.astype(np.complex128)  # 转换为 numpy 支持的复数类型
+    Ritz = torch.tensor(Ritz)
+    Q = Q.astype(np.complex128)
 
     Qimag = torch.FloatTensor(Q.imag).to(device)
 
@@ -183,10 +166,10 @@ def main(args):
     Ritz = Ritz.to('cuda')
     for i in range(len(L)):
         # print(np.min(L[1].imag.toarray()*1j))
-        L_img.append(sparse_mx_to_torch_sparse_tensor(L[i].imag).to(device))  # 将虚部转换成tensor
-        L_real.append(sparse_mx_to_torch_sparse_tensor(L[i].real).to(device))  # 将实部扎unhuan为tensor
+        L_img.append(sparse_mx_to_torch_sparse_tensor(L[i].imag).to(device))
+        L_real.append(sparse_mx_to_torch_sparse_tensor(L[i].real).to(device))
 
-    label = torch.from_numpy(_label_[np.newaxis]).to(device)  # 将分类标签也转换成tensor
+    label = torch.from_numpy(_label_[np.newaxis]).to(device)
     # label = torch.FloatTensor(label).to(device)
     # print(label.dtype)
     X_img = torch.FloatTensor(X).to(device)
@@ -234,10 +217,10 @@ def main(args):
         # Train/Validation/Test
         #################################
         best_test_err = 1000.0
-        early_stopping = 0  # 若长期出现精度没有提高的情况就停止训练
-        # 记录开始时间
+        early_stopping = 0
 
-        # 开始训练
+
+
         for epoch in range(args.epochs):
             start_time = time.time()
 
@@ -258,10 +241,9 @@ def main(args):
             pred_label = preds.max(dim=1)[1]
             train_acc = 1.0 * ((pred_label[:, train_index] == label[:, train_index])).sum().detach().item() / count
 
-            train_loss.backward(retain_graph=True )  # 这是计算梯度
-            opt.step()  # opt.step() 是 PyTorch 中优化器的一个方法调用。在训练神经网络时，需要对模型参数进行更新，以使损失函数最小化。优化器是用于执行此操作的工具之一。opt.step()
-            # 方法会根据损失函数的梯度来更新模型的参数。换句话说，它将通过计算每个参数的梯度并将其与学习率相乘来计算新的参数值。然后，这些新的参数值将被用于下一轮的反向传播和梯度计算。通过多次迭代和更新参数，神经网络将能够逐渐提高对训练数据的拟合程度，并在测试数据上获得更好的性能。
-            opt.zero_grad()  # 梯度清零应该得在反向传播之后把
+            train_loss.backward(retain_graph=True )
+            opt.step()
+            opt.zero_grad()
             outstrtrain = 'Train loss:, %.6f, acc:, %.3f,' % (train_loss.detach().item(), train_acc)
             # scheduler.step()
 
@@ -303,10 +285,9 @@ def main(args):
                 break
 
         write_log(vars(args), log_path)
-        # 记录结束时间
+
         end_time = time.perf_counter()
 
-        # 计算并打印训练时间
         #training_time = end_time - start_time
         #print(f'Training time: {training_time:.2f} seconds')
 
@@ -314,7 +295,7 @@ def main(args):
         # Testing
         ####################
 
-        # 这相当于用最初的训练结果进行测试
+
         model.load_state_dict(torch.load(log_path + '/model' + str(split) + '.t7'))
         # print(model.state_dict().items())
         model.eval()
@@ -328,7 +309,7 @@ def main(args):
         count = np.sum(test_index)
         acc_test = (1.0 * ((pred_label[:, test_index] == label[:, test_index])).sum().detach().item()) / count
 
-        # 着相当于用最后的训练结果进行测试
+
         model.load_state_dict(torch.load(log_path + '/model_latest' + str(split) + '.t7'))
         model.eval()
         preds = model(X_real, X_img)
@@ -431,6 +412,6 @@ if __name__ == "__main__":
         int(args.num_filter)) + 'q' + str(int(100 * args.q)) + 'layer' + str(int(args.layer))
     args.save_name = save_name
 
-    # 程序开始
+
     results = main(args)
     np.save(dir_name + save_name, results)

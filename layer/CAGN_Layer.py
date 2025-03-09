@@ -12,12 +12,10 @@ rng = np.random.default_rng(seed=42)
 cuda_device = 0
 device = torch.device("cuda:0")
 
-# from torch.nn import MultiheadAttention
-# 这就是在每个巻积层进行巻积操作对应论文中的公式（6）但是这个权重就很有意思，论文中没有说这么干
-# 这才是实际的巻积过程
+
 import torch
 
-class complex_relu_layer(nn.Module):  # 这个是复数激活函数层
+class complex_relu_layer(nn.Module):
     def __init__(self, ):
         super(complex_relu_layer, self).__init__()
 
@@ -65,10 +63,10 @@ def process(mul_L_real, mul_L_imag, weight, X_real, X_imag):
     L_imag_X_imag = torch.spmm(mul_L_imag.float(), X_imag_weighted.float())
     L_imag_X_real = torch.spmm(mul_L_imag.float(), X_real_weighted.float())
     L_real_X_imag = torch.spmm(mul_L_real.float(), X_imag_weighted.float())
-    # # 计算 real 和 imag
+
     real = L_real_X_real - L_imag_X_imag
     imag = L_imag_X_real + L_real_X_imag
-    # 返回 float16 精度结果（减少显存使用）
+
     return torch.stack([real, imag])
 
 
@@ -89,7 +87,7 @@ class complex_relu_layer_(nn.Module):
         return real, img
 
 
-class CAGNConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
+class CAGNConv(nn.Module):
     """
     The MagNet convolution operation.
 
@@ -105,7 +103,7 @@ class CAGNConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
 
         # L_norm_real, L_norm_imag = L_norm_real, L_norm_imag
 
-        # list of K sparsetensors, each is N by N  滤波器  各种尺度的laplacian的序列  list
+        # list of K sparsetensors, each is N by N
         #  self.Attention = None
         self.mul_L_real = L_norm_real  # [K, N, N]
         self.mul_L_imag = L_norm_imag  # [K, N, N]
@@ -153,13 +151,13 @@ class CAGNConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
             for i, T in enumerate(T_list):
                 # T = T/T.max()
 
-                diag_dd = torch.diag(T)  # diag_dd 是对每个特征值的n次方取对角线元素
+                diag_dd = torch.diag(T)
 
-                # 计算共用部分以减少矩阵乘法操作
+
                 Q_diag_dd_real = torch.mm(self.Qreal, diag_dd)
                 Q_diag_dd_imag = torch.mm(self.Qimag, diag_dd)
 
-                # 计算 real 和 imag 部分，并减少不必要的中间变量
+
                 real_part = torch.mm(Q_diag_dd_real, self.Qreal.T) + torch.mm(Q_diag_dd_imag, self.Qimag.T)
                 imag_part = torch.mm(Q_diag_dd_imag, self.Qreal.T) - torch.mm(Q_diag_dd_real, self.Qimag.T)
 
@@ -207,7 +205,7 @@ class CAGNConv(nn.Module):  # 这个是图巻积层  这就是线性感知机
                                              self.weight_res[i], X_real, X_imag))
         result = []
         result_long = []
-        for i in range(len(self.mul_L_real)):  # 我估计是知道为什么用异步去做了，他tensor乘法快不了
+        for i in range(len(self.mul_L_real)):
             result.append(torch.jit.wait(future[i]))
 
         if self.multihopCov:
@@ -262,7 +260,6 @@ class CAGN_Lanczos(nn.Module):
         self.num_eig_vec = num_eig_vec
         self.multihopCov = multihopCov
 
-        # 这直接创建了第一个巻积层   in_c:原始特征维度数量  out_c 中间隐藏层特征维度数量    L_norm_real：磁化laplacian矩阵的实部
         chebs = [CAGNConv(in_c=in_c, out_c=num_filter, K=K, L_norm_real=L_norm_real, L_norm_imag=L_norm_imag,
                           multihopCov=self.multihopCov,multihopRes = multihopRes, Ritz=self.R, Qreal=self.Qreal, Qimag=self.Qimag,
                           num_eig_vec=self.num_eig_vec, alpha=1
