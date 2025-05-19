@@ -1,6 +1,15 @@
 # CAGN
 This repository is the offical PyTorch implementation of CAGN.
-
+'''
+@article{xu2025complex,
+  title={Complex graph neural networks for multi-hop propagation},
+  author={Xu, Dong and Liu, Ziye and Li, Fengming and Meng, Yulong},
+  journal={Neurocomputing},
+  pages={130364},
+  year={2025},
+  publisher={Elsevier}
+}
+'''
 ## Enviroment Setup
 The experiments were conducted under this specific environment:
 
